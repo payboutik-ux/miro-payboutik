@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Miro — PayBoutik</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app">
+    <header id="header">
+      <div class="brand-name">Miro</div>
+      <div class="status"><span class="dot"></span>Pay Boutik</div>
+    </header>
+
+    <div id="chat">
+      <div class="welcome" id="welcome">
+        Salut, je suis <b>Miro</b> 👋<br>
+        Je t'aide à vendre plus ou à trouver ce que tu cherches sur Pay Boutik.
+        <div class="chips">
+          <button class="chip" onclick="suggerer('Comment vendre plus sur ma boutique ?')">Vendre plus</button>
+          <button class="chip" onclick="suggerer('Trouve-moi un pantalon noir')">Trouver un produit</button>
+          <button class="chip" onclick="suggerer('Combien dois-je épargner et réinvestir ?')">Épargne & réinvestissement</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="input-bar">
+      <button class="icon-btn" id="photoBtn" aria-label="Ajouter une photo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="5" width="18" height="14" rx="2"/>
+          <circle cx="9" cy="10" r="2"/>
+          <path d="M21 15l-4.5-4.5a2 2 0 0 0-2.8 0L5 19"/>
+        </svg>
+      </button>
+      <input type="text" id="msg" placeholder="Écris à Miro..." autocomplete="off">
+      <button id="send" onclick="envoyer()" aria-label="Envoyer">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M3 11.5L21 3l-8.5 18-2.5-8-7-1.5z" fill="white"/></svg>
+      </button>
+    </div>
+  </div>
+
+<script>
+  const chat = document.getElementById('chat');
+  const input = document.getElementById('msg');
+  const welcome = document.getElementById('welcome');
+  const header = document.getElementById('header');
+  const photoBtn = document.getElementById('photoBtn');
+
+  const DUREE_SESSION_MS = 24 * 60 * 60 * 1000; // 24 heures
+
+  function initSession(){
+    const creationTime = localStorage.getItem('miro_session_time');
+    const maintenant = Date.now();
+
+    if (!creationTime || (maintenant - parseInt(creationTime, 10)) > DUREE_SESSION_MS) {
+      const nouvelId = 'user_' + Math.random().toString(36).slice(2, 10);
+      localStorage.setItem('miro_user_id', nouvelId);
+      localStorage.setItem('miro_session_time', maintenant.toString());
+      return nouvelId;
+    }
+    return localStorage.getItem('miro_user_id');
+  }
+
+  let userId = initSession();
+
+  photoBtn.addEventListener('click', function(){
+    alert("L'ajout de photo arrive bientôt !");
+  });
+
+  let dernierScroll = 0;
+  chat.addEventListener('scroll', function(){
+    const actuel = chat.scrollTop;
+    if (actuel > dernierScroll && actuel > 40) {
+      header.classList.add('hidden');
+    } else {
+      header.classList.remove('hidden');
+    }
+    dernierScroll = actuel;
+  });
+
+  function suggerer(texte){
+    input.value = texte;
+    envoyer();
+  }
+
+  function scrollBas(){
+    chat.scrollTop = chat.scrollHeight;
+  }
+
+  function ajouterMessage(texte, type){
+    const row = document.createElement('div');
+    row.className = 'row ' + type;
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble';
+    bubble.textContent = texte;
+    row.appendChild(bubble);
+    chat.appendChild(row);
+    scrollBas();
+  }
+
+  function afficherTyping(){
+    const row = document.createElement('div');
+    row.className = 'row miro';
+    row.id = 'typing-row';
+    row.innerHTML = '<div class="typing"><span></span><span></span><span></span></div>';
+    chat.appendChild(row);
+    scrollBas();
+  }
+
+  function retirerTyping(){
+    const row = document.getElementById('typing-row');
+    if (row) row.remove();
+  }
+
+  async function envoyer(){
+    const texte = input.value.trim();
+    if (!texte) return;
+
+    if (welcome) { welcome.style.display = 'none'; }
+
+    ajouterMessage(texte, 'user');
+    input.value = '';
+    afficherTyping();
+
+    try {
+      const res = await fetch('/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: texte, userId: userId })
+      });
+
+      retirerTyping();
+
+      // Création de la bulle de Miro, qui va se remplir petit à petit
+      const row = document.createElement('div');
+      row.className = 'row miro';
+      const bubble = document.createElement('div');
+      bubble.className = 'bubble';
+      row.appendChild(bubble);
+      chat.appendChild(row);
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let texteAffiche = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        texteAffiche += decoder.decode(value, { stream: true });
+        bubble.textContent = texteAffiche;
+        scrollBas();
+      }
+
+      if (!texteAffiche) {
+        bubble.textContent = "Désolé, je n'ai pas pu répondre. Réessaie.";
+      }
+
+    } catch (err) {
+      retirerTyping();
+      ajouterMessage("Erreur de connexion. Vérifie que le serveur tourne.", 'miro');
+    }
+  }
+
+
+  input.addEventListener('keypress', function(e){
+    if (e.key === 'Enter') envoyer();
+  });
+</script>
+</body>
+</html>
