@@ -91,9 +91,30 @@ header.hidden{
   flex-direction:column;
   gap:8px;
 }
-.row{ display:flex; }
-.row.user{ justify-content:flex-end; }
-.row.miro{ justify-content:flex-start; }
+.row{ display:flex; flex-direction:column; }
+.row.user{ align-items:flex-end; }
+.row.miro{ align-items:flex-start; }
+
+.msg-actions{
+  display:flex;
+  gap:4px;
+  margin-top:4px;
+  padding-left:2px;
+}
+.action-btn{
+  width:26px; height:26px;
+  border-radius:6px;
+  border:none;
+  background:transparent;
+  color:var(--muted);
+  display:flex; align-items:center; justify-content:center;
+  cursor:pointer;
+  transition:background .15s ease, color .15s ease;
+}
+.action-btn svg{ width:14px; height:14px; }
+.action-btn:hover{ background:var(--bubble-user); color:var(--navy); }
+.action-btn.copied{ color:#2ECC71; }
+.action-btn.playing{ color:var(--orange); background:var(--bubble-user); }
 .bubble{
   max-width:80%;
   padding:10px 14px;
@@ -190,6 +211,10 @@ header.hidden{
   font-family:'Inter',sans-serif;
   outline:none;
   color:var(--ink);
+  resize:none;
+  overflow-y:auto;
+  line-height:1.4;
+  max-height:120px;
 }
 #msg:focus{ border-color:var(--orange); background:#fff; }
 
@@ -208,3 +233,109 @@ header.hidden{
 
 #chat::-webkit-scrollbar{ width:4px; }
 #chat::-webkit-scrollbar-thumb{ background:#E0E0E0; border-radius:4px; }
+
+.msg-actions{
+  display:flex;
+  gap:2px;
+  margin-top:4px;
+  padding-left:2px;
+}
+.action-btn{
+  width:26px; height:26px;
+  border-radius:6px;
+  border:none;
+  background:transparent;
+  color:var(--muted);
+  display:flex; align-items:center; justify-content:center;
+  cursor:pointer;
+  transition:background .15s ease, color .15s ease;
+}
+.action-btn svg{ width:14px; height:14px; }
+.action-btn:hover{ background:var(--bubble-user); color:var(--navy); }
+.action-btn.copied{ color:#2ECC71; }
+.action-btn.active-like{ color:var(--orange); background:var(--bubble-user); }
+.action-btn.active-dislike{ color:#E15252; background:var(--bubble-user); }
+
+/* Panneau de feedback "je n'aime pas" */
+.feedback-overlay{
+  position:fixed;
+  inset:0;
+  background:rgba(20,20,20,0.45);
+  display:flex;
+  align-items:flex-end;
+  justify-content:center;
+  opacity:0;
+  pointer-events:none;
+  transition:opacity .2s ease;
+  z-index:50;
+}
+.feedback-overlay.visible{
+  opacity:1;
+  pointer-events:auto;
+}
+.feedback-panel{
+  background:#fff;
+  width:100%;
+  max-width:480px;
+  border-radius:18px 18px 0 0;
+  padding:20px 18px 18px;
+}
+.feedback-title{
+  font-weight:700;
+  font-size:15px;
+  color:var(--ink);
+  margin-bottom:12px;
+}
+.feedback-options{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-bottom:12px;
+}
+.feedback-chip{
+  border:1px solid var(--border);
+  background:#FAFAFA;
+  color:var(--ink);
+  padding:7px 12px;
+  border-radius:16px;
+  font-size:12.5px;
+  cursor:pointer;
+}
+.feedback-chip.selected{
+  background:var(--navy);
+  color:#fff;
+  border-color:var(--navy);
+}
+#feedbackText{
+  width:100%;
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:10px 12px;
+  font-size:13.5px;
+  font-family:'Inter',sans-serif;
+  resize:none;
+  outline:none;
+  margin-bottom:14px;
+}
+#feedbackText:focus{ border-color:var(--orange); }
+.feedback-actions{
+  display:flex;
+  gap:10px;
+  justify-content:flex-end;
+}
+.feedback-cancel, .feedback-send{
+  padding:9px 16px;
+  border-radius:20px;
+  font-size:13.5px;
+  font-weight:600;
+  border:none;
+  cursor:pointer;
+}
+.feedback-cancel{
+  background:#F0F2F5;
+  color:var(--ink);
+}
+.feedback-send{
+  background:var(--orange);
+  color:#fff;
+}

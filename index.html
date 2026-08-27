@@ -12,13 +12,13 @@
   <div class="app">
     <header id="header">
       <div class="brand-name">Miro</div>
-      <div class="status"><span class="dot"></span>Pay Boutik</div>
+      <div class="status"><span class="dot"></span>PayBoutik</div>
     </header>
 
     <div id="chat">
       <div class="welcome" id="welcome">
         Salut, je suis <b>Miro</b> 👋<br>
-        Je t'aide à vendre plus ou à trouver ce que tu cherches sur Pay Boutik.
+        Je t'aide à vendre plus ou à trouver ce que tu cherches sur PayBoutik.
         <div class="chips">
           <button class="chip" onclick="suggerer('Comment vendre plus sur ma boutique ?')">Vendre plus</button>
           <button class="chip" onclick="suggerer('Trouve-moi un pantalon noir')">Trouver un produit</button>
@@ -35,10 +35,28 @@
           <path d="M21 15l-4.5-4.5a2 2 0 0 0-2.8 0L5 19"/>
         </svg>
       </button>
-      <input type="text" id="msg" placeholder="Écris à Miro..." autocomplete="off">
+      <textarea id="msg" placeholder="Écris à Miro..." rows="1"></textarea>
       <button id="send" onclick="envoyer()" aria-label="Envoyer">
         <svg viewBox="0 0 24 24" fill="none"><path d="M3 11.5L21 3l-8.5 18-2.5-8-7-1.5z" fill="white"/></svg>
       </button>
+    </div>
+  </div>
+
+  <!-- Panneau de feedback "je n'aime pas" -->
+  <div id="feedbackOverlay" class="feedback-overlay">
+    <div class="feedback-panel">
+      <div class="feedback-title">Pourquoi tu n'aimes pas cette réponse ?</div>
+      <div class="feedback-options" id="feedbackOptions">
+        <button class="feedback-chip" data-val="Réponse pas claire">Réponse pas claire</button>
+        <button class="feedback-chip" data-val="Information incorrecte">Information incorrecte</button>
+        <button class="feedback-chip" data-val="Trop long / trop bavard">Trop long / trop bavard</button>
+        <button class="feedback-chip" data-val="Pas utile pour moi">Pas utile pour moi</button>
+      </div>
+      <textarea id="feedbackText" placeholder="Autre chose à préciser (facultatif)..." rows="3"></textarea>
+      <div class="feedback-actions">
+        <button class="feedback-cancel" id="feedbackCancel">Annuler</button>
+        <button class="feedback-send" id="feedbackSend">Envoyer</button>
+      </div>
     </div>
   </div>
 
@@ -48,6 +66,11 @@
   const welcome = document.getElementById('welcome');
   const header = document.getElementById('header');
   const photoBtn = document.getElementById('photoBtn');
+  const feedbackOverlay = document.getElementById('feedbackOverlay');
+  const feedbackOptions = document.getElementById('feedbackOptions');
+  const feedbackText = document.getElementById('feedbackText');
+  const feedbackCancel = document.getElementById('feedbackCancel');
+  const feedbackSend = document.getElementById('feedbackSend');
 
   const DUREE_SESSION_MS = 24 * 60 * 60 * 1000; // 24 heures
 
@@ -90,6 +113,13 @@
     chat.scrollTop = chat.scrollHeight;
   }
 
+  // Ajuste automatiquement la hauteur de la zone de saisie (retour à la ligne)
+  function ajusterHauteurInput(){
+    input.style.height = 'auto';
+    input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+  }
+  input.addEventListener('input', ajusterHauteurInput);
+
   function ajouterMessage(texte, type){
     const row = document.createElement('div');
     row.className = 'row ' + type;
@@ -99,6 +129,7 @@
     row.appendChild(bubble);
     chat.appendChild(row);
     scrollBas();
+    return row;
   }
 
   function afficherTyping(){
@@ -115,6 +146,79 @@
     if (row) row.remove();
   }
 
+  // Ouvre le panneau de feedback pour un message donné
+  let messageEnCoursFeedback = null;
+
+  function ouvrirFeedback(rowElement){
+    messageEnCoursFeedback = rowElement;
+    feedbackText.value = '';
+    document.querySelectorAll('.feedback-chip').forEach(c => c.classList.remove('selected'));
+    feedbackOverlay.classList.add('visible');
+  }
+
+  function fermerFeedback(){
+    feedbackOverlay.classList.remove('visible');
+    messageEnCoursFeedback = null;
+  }
+
+  feedbackOptions.addEventListener('click', function(e){
+    const chip = e.target.closest('.feedback-chip');
+    if (!chip) return;
+    chip.classList.toggle('selected');
+  });
+
+  feedbackCancel.addEventListener('click', fermerFeedback);
+
+  feedbackSend.addEventListener('click', function(){
+    // Pas encore relié à un serveur : on garde juste une confirmation visuelle pour l'instant.
+    // Plus tard : envoyer { raisons, commentaire } vers une route dédiée du serveur.
+    fermerFeedback();
+  });
+
+  // Ajoute les boutons copier / j'aime / je n'aime pas sous une bulle de Miro
+  function ajouterActions(rowElement, bubble, texte){
+    const actions = document.createElement('div');
+    actions.className = 'msg-actions';
+
+    const btnCopier = document.createElement('button');
+    btnCopier.className = 'action-btn';
+    btnCopier.setAttribute('aria-label', 'Copier');
+    btnCopier.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></svg>';
+    btnCopier.addEventListener('click', function(){
+      navigator.clipboard.writeText(texte).then(function(){
+        btnCopier.classList.add('copied');
+        setTimeout(function(){ btnCopier.classList.remove('copied'); }, 1200);
+      });
+    });
+
+    const btnLike = document.createElement('button');
+    btnLike.className = 'action-btn';
+    btnLike.setAttribute('aria-label', "J'aime");
+    btnLike.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10v11H4a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1h3Zm0 0 4.6-7.4A1 1 0 0 1 12.5 2c1.4 0 2.5 1.1 2.5 2.5V9h4.3a2 2 0 0 1 2 2.3l-1.2 8A2 2 0 0 1 18.1 21H7"/></svg>';
+
+    const btnDislike = document.createElement('button');
+    btnDislike.className = 'action-btn';
+    btnDislike.setAttribute('aria-label', "Je n'aime pas");
+    btnDislike.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="transform:rotate(180deg)"><path d="M7 10v11H4a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1h3Zm0 0 4.6-7.4A1 1 0 0 1 12.5 2c1.4 0 2.5 1.1 2.5 2.5V9h4.3a2 2 0 0 1 2 2.3l-1.2 8A2 2 0 0 1 18.1 21H7"/></svg>';
+
+    btnLike.addEventListener('click', function(){
+      const actif = btnLike.classList.contains('active-like');
+      btnLike.classList.toggle('active-like');
+      btnDislike.classList.remove('active-dislike');
+    });
+
+    btnDislike.addEventListener('click', function(){
+      btnDislike.classList.add('active-dislike');
+      btnLike.classList.remove('active-like');
+      ouvrirFeedback(rowElement);
+    });
+
+    actions.appendChild(btnCopier);
+    actions.appendChild(btnLike);
+    actions.appendChild(btnDislike);
+    rowElement.appendChild(actions);
+  }
+
   async function envoyer(){
     const texte = input.value.trim();
     if (!texte) return;
@@ -123,6 +227,7 @@
 
     ajouterMessage(texte, 'user');
     input.value = '';
+    ajusterHauteurInput();
     afficherTyping();
 
     try {
@@ -134,7 +239,6 @@
 
       retirerTyping();
 
-      // Création de la bulle de Miro, qui va se remplir petit à petit
       const row = document.createElement('div');
       row.className = 'row miro';
       const bubble = document.createElement('div');
@@ -155,8 +259,12 @@
       }
 
       if (!texteAffiche) {
-        bubble.textContent = "Désolé, je n'ai pas pu répondre. Réessaie.";
+        texteAffiche = "Désolé, je n'ai pas pu répondre. Réessaie.";
+        bubble.textContent = texteAffiche;
       }
+
+      ajouterActions(row, bubble, texteAffiche);
+      scrollBas();
 
     } catch (err) {
       retirerTyping();
@@ -164,9 +272,11 @@
     }
   }
 
-
-  input.addEventListener('keypress', function(e){
-    if (e.key === 'Enter') envoyer();
+  input.addEventListener('keydown', function(e){
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      envoyer();
+    }
   });
 </script>
 </body>
